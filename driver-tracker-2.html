@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pakovanje Tracker</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pakovanje">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0f13">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a22;
+    --surface2: #22222e;
+    --border: #2e2e3e;
+    --ok: #2dde6c;
+    --ok-bg: rgba(45,222,108,0.12);
+    --ok-border: rgba(45,222,108,0.35);
+    --err: #ff4455;
+    --err-bg: rgba(255,68,85,0.12);
+    --err-border: rgba(255,68,85,0.35);
+    --text: #e8e8f0;
+    --text-dim: #6a6a8a;
+    --accent: #7c6dfa;
+    --yellow: #ffd94a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #7c6dfa, #5a4dcc);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .logo-text { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; text-transform: uppercase; }
+
+  .month-nav { display: flex; align-items: center; gap: 10px; }
+  .nav-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); background: rgba(124,109,250,0.12); }
+  .month-label { font-size: 14px; font-weight: 700; min-width: 140px; text-align: center; }
+
+  .header-stats { display: flex; gap: 8px; }
+  .stat-chip {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 4px;
+  }
+  .stat-ok { background: var(--ok-bg); border: 1px solid var(--ok-border); color: var(--ok); }
+  .stat-err { background: var(--err-bg); border: 1px solid var(--err-border); color: var(--err); }
+
+  .container { padding: 16px; max-width: 1200px; margin: 0 auto; }
+
+  .grid-header {
+    display: grid; gap: 6px; margin-bottom: 6px;
+    align-items: center;
+  }
+  .driver-label {
+    text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); padding: 4px 0;
+  }
+
+  .days-wrapper { display: flex; flex-direction: column; gap: 3px; }
+  .day-row { display: grid; gap: 6px; align-items: center; }
+
+  .day-num {
+    text-align: center; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace; color: var(--text-dim); flex-shrink: 0;
+  }
+  .day-num.today .dn { color: var(--yellow); font-weight: 800; }
+  .dn { font-size: 12px; font-weight: 600; }
+  .dw { font-size: 9px; margin-top: 1px; }
+  .weekend { color: var(--accent) !important; }
+
+  .driver-cell {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 7px;
+    display: flex; align-items: center; gap: 5px;
+    cursor: pointer; transition: all 0.15s;
+    min-height: 38px; position: relative;
+  }
+  .driver-cell:hover { border-color: rgba(124,109,250,0.5); background: rgba(124,109,250,0.06); }
+  .driver-cell.status-ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  .driver-cell.status-err { background: var(--err-bg); border-color: var(--err-border); }
+
+  .status-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; flex-shrink: 0; transition: all 0.15s;
+    color: var(--text-dim);
+  }
+  .status-ok .status-dot { background: var(--ok); border-color: var(--ok); color: #fff; font-weight: 800; }
+  .status-err .status-dot { background: var(--err); border-color: var(--err); color: #fff; font-weight: 800; }
+
+  .cell-note {
+    font-size: 9px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; line-height: 1.3;
+  }
+  .status-ok .cell-note { color: rgba(45,222,108,0.65); }
+  .status-err .cell-note { color: rgba(255,68,85,0.7); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78); z-index: 200;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 26px; width: 100%; max-width: 400px;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 3px; }
+  .modal-sub { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-bottom: 20px; }
+
+  .status-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .toggle-btn {
+    padding: 13px; border-radius: 11px; border: 2px solid var(--border);
+    background: var(--surface2); color: var(--text-dim);
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.18s;
+  }
+  .toggle-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+  .toggle-btn.active-ok { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+  .toggle-btn.active-err { border-color: var(--err); background: var(--err-bg); color: var(--err); }
+
+  .field-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; display: block;
+  }
+  textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 13px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 13px; resize: none;
+    outline: none; min-height: 80px; transition: border-color 0.15s; margin-bottom: 12px;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-dim); }
+
+  .fault-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 13px; background: var(--surface2);
+    border-radius: 10px; border: 1px solid var(--border);
+    cursor: pointer; transition: border-color 0.15s; margin-bottom: 18px;
+  }
+  .fault-row:hover { border-color: var(--err-border); }
+  .fault-row.checked { border-color: var(--err-border); background: var(--err-bg); }
+  .custom-check {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; flex-shrink: 0; transition: all 0.15s; color: #fff;
+  }
+  .fault-row.checked .custom-check { background: var(--err); border-color: var(--err); }
+  .fault-text { font-size: 13px; font-weight: 600; }
+  .fault-row.checked .fault-text { color: var(--err); }
+
+  .modal-actions { display: flex; gap: 8px; }
+  .btn-cancel {
+    flex: 1; padding: 11px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text-dim); font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-cancel:hover { color: var(--text); }
+  .btn-save {
+    flex: 2; padding: 11px; background: var(--accent); border: none;
+    border-radius: 10px; color: white; font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-save:hover { background: #6a5de0; }
+  .btn-clear {
+    padding: 11px 14px; background: transparent; border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text-dim); font-family: 'Syne', sans-serif;
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-clear:hover { border-color: var(--err-border); color: var(--err); }
+
+  /* SUMMARY */
+  .summary-section {
+    margin-top: 24px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  }
+  .summary-title-bar {
+    padding: 13px 18px; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .summary-col {
+    padding: 16px 12px; border-right: 1px solid var(--border); text-align: center;
+  }
+  .summary-col:last-child { border-right: none; }
+  .s-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 10px; }
+  .s-ok { font-size: 26px; font-weight: 800; color: var(--ok); font-family: 'JetBrains Mono', monospace; }
+  .s-err { font-size: 26px; font-weight: 800; color: var(--err); font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+  .s-lbl { font-size: 9px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+  .bonus-badge {
+    margin-top: 10px; padding: 3px 10px;
+    background: rgba(255,217,74,0.12); border: 1px solid rgba(255,217,74,0.3);
+    border-radius: 20px; font-size: 9px; font-weight: 700; color: var(--yellow); display: inline-block;
+  }
+  .nobonus-badge {
+    margin-top: 10px; padding: 3px 10px;
+    background: var(--err-bg); border: 1px solid var(--err-border);
+    border-radius: 20px; font-size: 9px; font-weight: 700; color: var(--err); display: inline-block;
+  }
+
+  @media (max-width: 560px) {
+    .header-stats { display: none; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .summary-col:nth-child(2) { border-right: none; }
+    .summary-col:nth-child(3) { border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">Pakovanje Tracker</div>
+      <div class="logo-sub">Evidencija grešaka</div>
+    </div>
+  </div>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="month-label" id="monthLabel"></div>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+  <div class="header-stats" id="headerStats"></div>
+</header>
+
+<div class="container">
+  <div id="gridWrap"></div>
+  <div class="summary-section">
+    <div class="summary-title-bar">📊 Mesečni pregled po vozaču</div>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="status-toggle">
+      <button class="toggle-btn" id="btnOk" onclick="setStatus('ok')">✅ Sve OK</button>
+      <button class="toggle-btn" id="btnErr" onclick="setStatus('err')">❌ Greška</button>
+    </div>
+    <label class="field-label">Napomena</label>
+    <textarea id="noteInput" placeholder="Opiši šta se desilo... (opciono)"></textarea>
+    <div class="fault-row" id="faultRow" onclick="toggleFault()">
+      <div class="custom-check" id="customCheck"></div>
+      <div class="fault-text">⚠️ Naša greška</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-clear" onclick="clearCell()">Obriši</button>
+      <button class="btn-cancel" onclick="closeModal()">Otkaži</button>
+      <button class="btn-save" onclick="saveCell()">Sačuvaj</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DRIVERS = ['Bora','Darko','Boris','Meda'];
+const MONTHS = ['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','Septembar','Oktobar','Novembar','Decembar'];
+const DAYS = ['Ned','Pon','Uto','Sre','Čet','Pet','Sub'];
+
+let year, month, data = {}, modalKey = null, mStatus = null, mFault = false;
+
+function sk(y,m){ return `pkt_${y}_${m}`; }
+function ck(d,di){ return `${year}-${month}-${d}-${di}`; }
+function dim(y,m){ return new Date(y,m+1,0).getDate(); }
+function dow(y,m,d){ return new Date(y,m,d).getDay(); }
+
+function load(y,m){
+  try{ const r=localStorage.getItem(sk(y,m)); data=r?JSON.parse(r):{}; }catch(e){ data={}; }
+}
+function save(){ localStorage.setItem(sk(year,month),JSON.stringify(data)); }
+
+function isToday(d){
+  const n=new Date();
+  return n.getFullYear()===year&&n.getMonth()===month&&n.getDate()===d;
+}
+
+function renderAll(){
+  const days=dim(year,month);
+  const cols=`52px repeat(${DRIVERS.length},1fr)`;
+  let html=`<div class="grid-header" style="grid-template-columns:${cols}"><div></div>`;
+  DRIVERS.forEach(d=>{ html+=`<div class="driver-label">${d}</div>`; });
+  html+=`</div><div class="days-wrapper">`;
+
+  for(let d=1;d<=days;d++){
+    const w=dow(year,month,d);
+    const wn=DAYS[w];
+    const wknd=w===0||w===6;
+    const td=isToday(d);
+    html+=`<div class="day-row" style="grid-template-columns:${cols}">`;
+    html+=`<div class="day-num${td?' today':''}">
+      <div class="dn${wknd?' weekend':''}">${String(d).padStart(2,'0')}</div>
+      <div class="dw${wknd?' weekend':''}">${wn}</div>
+    </div>`;
+    DRIVERS.forEach((_,di)=>{
+      const e=data[ck(d,di)]||{};
+      const st=e.status||null;
+      let cls='';let dot='·';
+      if(st==='ok'){cls='status-ok';dot='✓';}
+      else if(st==='err'){cls='status-err';dot='✕';}
+      let np='';
+      if(e.ourFault&&st==='err') np='⚠ Naša greška'+(e.note?': ':'')+((e.note||'').slice(0,15));
+      else if(e.note) np=(e.note||'').length>20?(e.note||'').slice(0,20)+'…':(e.note||'');
+      html+=`<div class="driver-cell ${cls}" onclick="openModal(${d},${di})">
+        <div class="status-dot">${dot}</div>
+        <div class="cell-note">${np}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  document.getElementById('gridWrap').innerHTML=html;
+  document.getElementById('monthLabel').textContent=`${MONTHS[month]} ${year}`;
+  updateStats();
+  updateSummary();
+}
+
+function updateStats(){
+  let ok=0,err=0;
+  Object.values(data).forEach(e=>{if(e.status==='ok')ok++;else if(e.status==='err')err++;});
+  document.getElementById('headerStats').innerHTML=`
+    <div class="stat-chip stat-ok">✓ ${ok} OK</div>
+    <div class="stat-chip stat-err">✕ ${err} Greška</div>`;
+}
+
+function updateSummary(){
+  const days=dim(year,month);
+  let html='';
+  DRIVERS.forEach((dr,di)=>{
+    let ok=0,err=0,of=0;
+    for(let d=1;d<=days;d++){
+      const e=data[ck(d,di)]||{};
+      if(e.status==='ok')ok++;
+      else if(e.status==='err'){err++;if(e.ourFault)of++;}
+    }
+    const bonus=err===0&&ok>0;
+    html+=`<div class="summary-col">
+      <div class="s-name">${dr}</div>
+      <div class="s-ok">${ok}</div><div class="s-lbl">ok dana</div>
+      <div class="s-err">${err}</div><div class="s-lbl">grešaka${of>0?` (naša: ${of})`:''}</div>
+      ${bonus?'<div class="bonus-badge">🏆 BONUS</div>':err>0?'<div class="nobonus-badge">❌ Bez bonusa</div>':''}
+    </div>`;
+  });
+  document.getElementById('summaryGrid').innerHTML=html;
+}
+
+function openModal(d,di){
+  modalKey=ck(d,di);
+  const e=data[modalKey]||{};
+  mStatus=e.status||null; mFault=e.ourFault||false;
+  const date=new Date(year,month,d);
+  document.getElementById('mTitle').textContent=DRIVERS[di];
+  document.getElementById('mSub').textContent=`${DAYS[date.getDay()]}, ${String(d).padStart(2,'0')}. ${MONTHS[month]} ${year}`;
+  document.getElementById('noteInput').value=e.note||'';
+  updToggle(); updFault();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); modalKey=null; }
+function overlayClick(e){ if(e.target===document.getElementById('modalOverlay'))closeModal(); }
+
+function setStatus(s){ mStatus=mStatus===s?null:s; updToggle(); }
+function updToggle(){
+  document.getElementById('btnOk').className='toggle-btn'+(mStatus==='ok'?' active-ok':'');
+  document.getElementById('btnErr').className='toggle-btn'+(mStatus==='err'?' active-err':'');
+}
+function toggleFault(){ mFault=!mFault; updFault(); }
+function updFault(){
+  const r=document.getElementById('faultRow');
+  const c=document.getElementById('customCheck');
+  if(mFault){r.classList.add('checked');c.textContent='✓';}
+  else{r.classList.remove('checked');c.textContent='';}
+}
+
+function saveCell(){
+  if(!modalKey)return;
+  if(mStatus===null){ delete data[modalKey]; }
+  else { data[modalKey]={status:mStatus,note:document.getElementById('noteInput').value.trim(),ourFault:mFault}; }
+  save(); closeModal(); renderAll();
+}
+function clearCell(){ if(!modalKey)return; delete data[modalKey]; save(); closeModal(); renderAll(); }
+
+function changeMonth(dir){
+  month+=dir;
+  if(month>11){month=0;year++;}
+  if(month<0){month=11;year--;}
+  load(year,month); renderAll();
+}
+
+(function(){
+  const n=new Date(); year=n.getFullYear(); month=n.getMonth();
+  load(year,month); renderAll();
+})();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
